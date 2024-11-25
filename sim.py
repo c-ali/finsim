@@ -3,7 +3,7 @@ import numpy as np
 
 
 def compute_interest(monthly_rate, yrly_interest, yrs, rate_increment=0, reorganize_portfolio_times=0, tax_rate=.25,
-                     monthly_fees=None):
+                     monthly_fees=None, yrly_taxfree=0):
     '''Computes the compound interest over yrs years assuming yrly_interest as yearly interest rate.
      Assumes monthy contributions of monthly_rate that incrase every year by rate_increment.
      Portfolio is reorganized i.e. taxed for reorganize_portfolio times.
@@ -40,6 +40,11 @@ def compute_interest(monthly_rate, yrly_interest, yrs, rate_increment=0, reorgan
         if reorganize_portfolio_times > 0 and yr in reorganize_portfolio_yrs:
             already_taxed += non_taxed * (1 - tax_rate / 100)
             non_taxed = 0
+
+        if yrly_taxfree > 0:
+            money_moved = min(yrly_taxfree, non_taxed)
+            non_taxed -= money_moved
+            already_taxed += money_moved
     # return already_taxed, money
 
     return already_taxed, non_taxed, total_fees
@@ -48,21 +53,21 @@ def compute_interest(monthly_rate, yrly_interest, yrs, rate_increment=0, reorgan
 yrs = 33
 montly_rate = 150  # 300
 dynamic = 0
-avg_interest = 7  # 9.1
+avg_interest = 9.1 #7  # 9.1
 avg_fond_fees = 1.35  # 1.35  # avg fees of the active managed fonds in the contract as a percentage
 contract_fee = 0.35  # annual fees for the contract itself, paid until pension as a percentage
 etf_fee = 1.35  # 0.22 # fees paid for the etf/investments outside of the contract as a percentage
 # fee = 1.35+0.35 #2.36 #2.34
+steuerfreibetrag = 1000
 monthly_fees = [[12 * 5, 28.88], [(60 - 21) * 12,
                                   17.86]]  # [[12*5, 28.88], [(60-21)*12, 17.86]] # monthly fees for the contract in absolute euros
 regular_tax_rate = 25  #  regular annual tax rate for capital investments in germany as a percentage
 contract_tax_rate = 10  # 0.04 # better tax rate you get because of the contract as a percentage
-reorganize_portfolio_times = 0
+reorganize_portfolio_times = 0  # number of times you reorganise your portfolio. Every time the portfolio is reorganized, taxes are paid
 
 contract_pct_fee = avg_fond_fees + contract_fee
-taxed_nocontract, untaxed_nocontract, _ = (compute_interest
-                                           (montly_rate, avg_interest - etf_fee, yrs, dynamic,
-                                            reorganize_portfolio_times, regular_tax_rate))
+taxed_nocontract, untaxed_nocontract, _ = compute_interest(montly_rate, avg_interest - etf_fee, yrs, dynamic,
+                                            reorganize_portfolio_times, regular_tax_rate, yrly_taxfree=steuerfreibetrag)
 taxed_contract, untaxed_contract, sum_monthly_fees = compute_interest(montly_rate, avg_interest - contract_pct_fee, yrs,
                                                                       dynamic, monthly_fees=monthly_fees)
 
@@ -74,4 +79,4 @@ ratio = worth_nocontract_after_taxes / worth_contract_after_taxes
 print(f"Ohne Vertrag {worth_nocontract_after_taxes:_.0f}€")
 print(f"Mit Vertrag {worth_contract_after_taxes:_.0f}€")
 print(f"Differenz {difference:_.0f}€ bzw {ratio * 100 - 100:.3f}%")
-print(f"Monthly Fees paid: {sum_monthly_fees:_.0f}")
+print(f"Vertragsabschluss & Verwaltungskosten ohne Jährliche verwaltungskosten der Fondanlage: {sum_monthly_fees:_.0f}")
