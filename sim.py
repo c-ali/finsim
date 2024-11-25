@@ -2,12 +2,42 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def compute_interest(monthly_rate, yrly_interest, yrs, rate_increment=0, reorganize_portfolio_times=0, tax_rate=.25,
+def compute_interest(monthly_rate, yrly_interest, yrs, rate_increment=0, reorganize_portfolio_times=0, tax_rate=0.25,
                      monthly_fees=None, yrly_taxfree=0):
-    '''Computes the compound interest over yrs years assuming yrly_interest as yearly interest rate.
-     Assumes monthy contributions of monthly_rate that incrase every year by rate_increment.
-     Portfolio is reorganized i.e. taxed for reorganize_portfolio times.
-     monthly_fees is a 2d-Array with tuples (months, rate) where rate gets paid for a number of months. Is inclusive of the upper limit'''
+    """
+    Calculates the total investment value and fees over a specified period, factoring in compound interest, taxes,
+    fees, and portfolio restructuring events.
+
+    Args:
+        monthly_rate (float): Initial monthly contribution amount.
+        yrly_interest (float): Annual interest rate (percentage).
+        yrs (int): Total number of years for the investment.
+        rate_increment (float, optional): Annual percentage increase in the monthly contribution. Default is 0. Often called dynamic in contracts.
+        reorganize_portfolio_times (int, optional): Number of times the portfolio is reorganized, triggering taxation. Default is 0. We assume these events are equally spaced
+        tax_rate (float, optional): Tax rate applied to untaxed gains during portfolio reorganization (percentage). Default is 25%.
+        monthly_fees (list of lists, optional): A 2D array where each sublist is a tuple of the form (number_of_months, fee_amount),
+                                                specifying monthly fees in absolute terms. Default is None. This can be used to represent the absolute fees of the contract.
+        yrly_taxfree (float, optional): Annual tax-free allowance for untaxed gains (currency units). Default is 0.
+
+    Returns:
+        tuple:
+            - already_taxed (float): Total value of taxed gains, including original contributions.
+            - non_taxed (float): Total untaxed gains at the end of the investment period.
+            - total_fees (float): Total fees deducted over the investment period.
+
+    Examples:
+        >>> compute_interest(150, 9.1, 30)
+        (taxed_gains, untaxed_gains, total_fees)
+
+        >>> compute_interest(200, 7.5, 20, rate_increment=2, reorganize_portfolio_times=3, tax_rate=20,
+                             monthly_fees=[[60, 30], [120, 20]], yrly_taxfree=1000)
+        (taxed_gains, untaxed_gains, total_fees)
+
+    Notes:
+        - The portfolio is reorganized evenly throughout the investment period based on the `reorganize_portfolio_times`.
+        - Untaxed gains are subjected to the `tax_rate` during portfolio reorganization.
+        - Fees are subtracted monthly and accumulate in the `total_fees`.
+    """
 
     # already taxed gains. this includes the original investment.
     # if reorganize_portfolio = 0, these values coincide
@@ -21,7 +51,7 @@ def compute_interest(monthly_rate, yrly_interest, yrs, rate_increment=0, reorgan
     for yr in range(yrs):
         # every year, increase rate by rate_increment
         if rate_increment > 0:
-            monthly_rate *= 1 + rate_increment / 100
+            monthly_rate *= 1 + (rate_increment / 100)
         for month in range(12):
             # every month add the monthly contribution and interest
             already_taxed += monthly_rate
@@ -66,10 +96,18 @@ contract_tax_rate = 10  # 0.04 # better tax rate you get because of the contract
 reorganize_portfolio_times = 0  # number of times you reorganise your portfolio. Every time the portfolio is reorganized, taxes are paid
 
 contract_pct_fee = avg_fond_fees + contract_fee
-taxed_nocontract, untaxed_nocontract, _ = compute_interest(montly_rate, avg_interest - etf_fee, yrs, dynamic,
-                                            reorganize_portfolio_times, regular_tax_rate, yrly_taxfree=steuerfreibetrag)
-taxed_contract, untaxed_contract, sum_monthly_fees = compute_interest(montly_rate, avg_interest - contract_pct_fee, yrs,
-                                                                      dynamic, monthly_fees=monthly_fees)
+taxed_nocontract, untaxed_nocontract, _ = compute_interest(montly_rate,
+                                                           avg_interest - etf_fee,
+                                                           yrs,
+                                                           rate_increment=dynamic,
+                                                           reorganize_portfolio_times=reorganize_portfolio_times,
+                                                           tax_rate=regular_tax_rate,
+                                                           yrly_taxfree=steuerfreibetrag)
+taxed_contract, untaxed_contract, sum_monthly_fees = compute_interest(montly_rate,
+                                                                      avg_interest - contract_pct_fee,
+                                                                      yrs,
+                                                                      rate_increment=dynamic,
+                                                                      monthly_fees=monthly_fees)
 
 worth_nocontract_after_taxes = taxed_nocontract + untaxed_nocontract * (1 - regular_tax_rate / 100) # applay final tax here
 worth_contract_after_taxes = taxed_contract + untaxed_contract * (1 - contract_tax_rate / 100) # applay final tax here
