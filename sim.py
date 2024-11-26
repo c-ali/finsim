@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def compute_interest(monthly_rate, yrly_interest, yrs, rate_increment=0, reorganize_portfolio_times=0, tax_rate=0.25,
+def compute_interest(monthly_rate, yrly_interest, rest_months, rate_increment=0, reorganize_portfolio_times=0, tax_rate=0.25,
                      monthly_fees=None, yrly_taxfree=0):
     """
     Calculates the total investment value and fees over a specified period, factoring in compound interest, taxes,
@@ -11,7 +11,7 @@ def compute_interest(monthly_rate, yrly_interest, yrs, rate_increment=0, reorgan
     Args:
         monthly_rate (float): Initial monthly contribution amount.
         yrly_interest (float): Annual interest rate (percentage).
-        yrs (int): Total number of years for the investment.
+        rest_months (int): Total number of months for the investment.
         rate_increment (float, optional): Annual percentage increase in the monthly contribution. Default is 0. Often called dynamic in contracts.
         reorganize_portfolio_times (int, optional): Number of times the portfolio is reorganized, triggering taxation. Default is 0. We assume these events are equally spaced
         tax_rate (float, optional): Tax rate applied to untaxed gains during portfolio reorganization (percentage). Default is 25%.
@@ -46,13 +46,21 @@ def compute_interest(monthly_rate, yrly_interest, yrs, rate_increment=0, reorgan
     monthly_interest = yrly_interest / 12
     total_fees = 0
 
+    yrs, rest_months = divmod(rest_months, 12)
+    print(rest_months)
     # reorganize portfolio X number of times "in the middle" of the investment process
     reorganize_portfolio_yrs = np.linspace(0, yrs, reorganize_portfolio_times + 2, dtype=int)[1:-1]
-    for yr in range(yrs):
+    for yr in range(yrs+1):
+        if yr == yrs:
+            months = rest_months
+            if months == 0:
+                break
+        else:
+            months = 12
         # every year, increase rate by rate_increment
         if rate_increment > 0:
             monthly_rate *= 1 + (rate_increment / 100)
-        for month in range(12):
+        for month in range(months):
             # every month add the monthly contribution and interest
             already_taxed += monthly_rate
             total_money = already_taxed + non_taxed
@@ -80,16 +88,16 @@ def compute_interest(monthly_rate, yrly_interest, yrs, rate_increment=0, reorgan
     return already_taxed, non_taxed, total_fees
 
 
-yrs = 33
+months = 33*12
 montly_rate = 150  # 300
 dynamic = 0
-avg_interest = 9.1 #7  # 9.1
+avg_interest = 9.1#9.1 #7  # 9.1
 avg_fond_fees = 1.35  # 1.35  # avg fees of the active managed fonds in the contract as a percentage
 contract_fee = 0.35  # annual fees for the contract itself, paid until pension as a percentage
-etf_fee = 1.35  # 0.22 # fees paid for the etf/investments outside of the contract as a percentage
+etf_fee = 0.22  # 0.22 # fees paid for the etf/investments outside of the contract as a percentage
 # fee = 1.35+0.35 #2.36 #2.34
-steuerfreibetrag = 1000
-monthly_fees = [[12 * 5, 28.88], [(60 - 21) * 12,
+steuerfreibetrag = 1000 #1000
+monthly_fees = [[12 * 2, 28.88], [(60 - 21) * 12,
                                   17.86]]  # [[12*5, 28.88], [(60-21)*12, 17.86]] # monthly fees for the contract in absolute euros
 regular_tax_rate = 25  #  regular annual tax rate for capital investments in germany as a percentage
 contract_tax_rate = 10  # 0.04 # better tax rate you get because of the contract as a percentage
@@ -98,14 +106,14 @@ reorganize_portfolio_times = 0  # number of times you reorganise your portfolio.
 contract_pct_fee = avg_fond_fees + contract_fee
 taxed_nocontract, untaxed_nocontract, _ = compute_interest(montly_rate,
                                                            avg_interest - etf_fee,
-                                                           yrs,
+                                                           months,
                                                            rate_increment=dynamic,
                                                            reorganize_portfolio_times=reorganize_portfolio_times,
                                                            tax_rate=regular_tax_rate,
                                                            yrly_taxfree=steuerfreibetrag)
 taxed_contract, untaxed_contract, sum_monthly_fees = compute_interest(montly_rate,
                                                                       avg_interest - contract_pct_fee,
-                                                                      yrs,
+                                                                      months,
                                                                       rate_increment=dynamic,
                                                                       monthly_fees=monthly_fees)
 
