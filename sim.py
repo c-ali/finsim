@@ -43,7 +43,7 @@ def compute_interest(monthly_rate, yrly_interest, rest_months, rate_increment=0,
     # if reorganize_portfolio = 0, these values coincide
     already_taxed = 0
     non_taxed = 0
-    monthly_interest = yrly_interest / 12
+    monthly_interest = (1 + yrly_interest / 100) ** (1 / 12) - 1  # is a ratio, not as a percentage
     total_fees = 0
 
     yrs, rest_months = divmod(rest_months, 12)
@@ -64,7 +64,7 @@ def compute_interest(monthly_rate, yrly_interest, rest_months, rate_increment=0,
             # every month add the monthly contribution and interest
             already_taxed += monthly_rate
             total_money = already_taxed + non_taxed
-            interest = total_money * monthly_interest / 100
+            interest = total_money * monthly_interest
             non_taxed += interest
 
             # add one or mutiple monthly fees
@@ -88,19 +88,19 @@ def compute_interest(monthly_rate, yrly_interest, rest_months, rate_increment=0,
     return already_taxed, non_taxed, total_fees
 
 
-months = 33*12
+months = 30#33*12
 montly_rate = 150  # 300
 dynamic = 0
-avg_interest = 9.1#9.1 #7  # 9.1
+avg_interest = 6#9.1 #7  # 9.1
 avg_fond_fees = 1.35  # 1.35  # avg fees of the active managed fonds in the contract as a percentage
 contract_fee = 0.35  # annual fees for the contract itself, paid until pension as a percentage
 etf_fee = 0.22  # 0.22 # fees paid for the etf/investments outside of the contract as a percentage
 # fee = 1.35+0.35 #2.36 #2.34
-steuerfreibetrag = 1000 #1000
-monthly_fees = [[12 * 2, 28.88], [(60 - 21) * 12,
+steuerfreibetrag = 0#1000 #1000
+monthly_fees = [[12 * 5, 28.88], [(60 - 21) * 12,
                                   17.86]]  # [[12*5, 28.88], [(60-21)*12, 17.86]] # monthly fees for the contract in absolute euros
-regular_tax_rate = 25  #  regular annual tax rate for capital investments in germany as a percentage
-contract_tax_rate = 10  # 0.04 # better tax rate you get because of the contract as a percentage
+regular_tax_rate = 0#25  #  regular annual tax rate for capital investments in germany as a percentage
+contract_tax_rate = 0#10  # 0.04 # better tax rate you get because of the contract as a percentage
 reorganize_portfolio_times = 0  # number of times you reorganise your portfolio. Every time the portfolio is reorganized, taxes are paid
 
 contract_pct_fee = avg_fond_fees + contract_fee
