@@ -87,42 +87,114 @@ def compute_interest(monthly_rate, yrly_interest, rest_months, rate_increment=0,
 
     return already_taxed, non_taxed, total_fees
 
+def compare_investments(
+    months,
+    monthly_rate,
+    dynamic,
+    avg_interest,
+    avg_fond_fees,
+    contract_fee,
+    etf_fee,
+    steuerfreibetrag,
+    monthly_fees,
+    regular_tax_rate,
+    contract_tax_rate,
+    reorganize_portfolio_times
+):
+    """
+    Compares two investment scenarios: one without a contract and one with a contract.
 
-months = 30#33*12
-montly_rate = 150  # 300
+    Calculates and prints the final worth after taxes for both scenarios, the difference between them,
+    and the total contract fees.
+
+    Parameters:
+        months (int): The total investment duration in months.
+        monthly_rate (float): The initial monthly contribution amount.
+        dynamic (float): The annual increment rate for the monthly contribution (in percent).
+        avg_interest (float): The average annual interest rate (in percent).
+        avg_fond_fees (float): The average fund fees for the contract scenario (in percent).
+        contract_fee (float): The annual contract fee (in percent).
+        etf_fee (float): The fee for investments outside the contract (in percent).
+        steuerfreibetrag (float): The annual tax-free allowance.
+        monthly_fees (list of lists): Monthly fees for the contract scenario. Each sublist contains
+            [duration_in_months, fee_amount].
+        regular_tax_rate (float): The regular tax rate for capital investments (in percent).
+        contract_tax_rate (float): The reduced tax rate applicable due to the contract (in percent).
+        reorganize_portfolio_times (int): Number of times the portfolio is reorganized, triggering taxation.
+
+    Returns:
+        tuple: A tuple containing:
+            - worth_nocontract_after_taxes (float): Final worth after taxes without the contract.
+            - worth_contract_after_taxes (float): Final worth after taxes with the contract.
+            - difference (float): Difference between the two scenarios.
+            - ratio (float): Ratio of the worth without contract to worth with contract.
+            - sum_monthly_fees (float): Total contract signing and administration fees.
+    """
+
+    contract_pct_fee = avg_fond_fees + contract_fee
+    taxed_nocontract, untaxed_nocontract, _ = compute_interest(monthly_rate,
+                                                               avg_interest - etf_fee,
+                                                               months,
+                                                               rate_increment=dynamic,
+                                                               reorganize_portfolio_times=reorganize_portfolio_times,
+                                                               tax_rate=regular_tax_rate,
+                                                               yrly_taxfree=steuerfreibetrag)
+    taxed_contract, untaxed_contract, sum_monthly_fees = compute_interest(monthly_rate,
+                                                                          avg_interest - contract_pct_fee,
+                                                                          months,
+                                                                          rate_increment=dynamic,
+                                                                          monthly_fees=monthly_fees)
+
+    worth_nocontract_after_taxes = taxed_nocontract + untaxed_nocontract * (1 - regular_tax_rate / 100) # applay final tax here
+    worth_contract_after_taxes = taxed_contract + untaxed_contract * (1 - contract_tax_rate / 100) # applay final tax here
+    difference = worth_nocontract_after_taxes - worth_contract_after_taxes
+    ratio = worth_nocontract_after_taxes / worth_contract_after_taxes
+
+    print(f"Ohne Vertrag {worth_nocontract_after_taxes:_.0f}€")
+    print(f"Mit Vertrag {worth_contract_after_taxes:_.0f}€")
+    print(f"Differenz {difference:_.0f}€ bzw {ratio * 100 - 100:.3f}%")
+    print(f"Vertragsabschluss & Verwaltungskosten ohne Jährliche verwaltungskosten der Fondanlage: {sum_monthly_fees:_.0f}")
+
+    return (
+        worth_nocontract_after_taxes,
+        worth_contract_after_taxes,
+        difference,
+        ratio,
+        sum_monthly_fees
+    )
+
+months = 30  # 33*12
+monthly_rate = 150  # 300
 dynamic = 0
-avg_interest = 6#9.1 #7  # 9.1
+avg_interest = 6  # 9.1 #7  # 9.1
 avg_fond_fees = 1.35  # 1.35  # avg fees of the active managed fonds in the contract as a percentage
 contract_fee = 0.35  # annual fees for the contract itself, paid until pension as a percentage
 etf_fee = 0.22  # 0.22 # fees paid for the etf/investments outside of the contract as a percentage
 # fee = 1.35+0.35 #2.36 #2.34
-steuerfreibetrag = 0#1000 #1000
+steuerfreibetrag = 0  # 1000 #1000
 monthly_fees = [[12 * 5, 28.88], [(60 - 21) * 12,
                                   17.86]]  # [[12*5, 28.88], [(60-21)*12, 17.86]] # monthly fees for the contract in absolute euros
-regular_tax_rate = 0#25  #  regular annual tax rate for capital investments in germany as a percentage
-contract_tax_rate = 0#10  # 0.04 # better tax rate you get because of the contract as a percentage
+regular_tax_rate = 0  # 25  #  regular annual tax rate for capital investments in germany as a percentage
+contract_tax_rate = 0  # 10  # 0.04 # better tax rate you get because of the contract as a percentage
 reorganize_portfolio_times = 0  # number of times you reorganise your portfolio. Every time the portfolio is reorganized, taxes are paid
 
-contract_pct_fee = avg_fond_fees + contract_fee
-taxed_nocontract, untaxed_nocontract, _ = compute_interest(montly_rate,
-                                                           avg_interest - etf_fee,
-                                                           months,
-                                                           rate_increment=dynamic,
-                                                           reorganize_portfolio_times=reorganize_portfolio_times,
-                                                           tax_rate=regular_tax_rate,
-                                                           yrly_taxfree=steuerfreibetrag)
-taxed_contract, untaxed_contract, sum_monthly_fees = compute_interest(montly_rate,
-                                                                      avg_interest - contract_pct_fee,
-                                                                      months,
-                                                                      rate_increment=dynamic,
-                                                                      monthly_fees=monthly_fees)
-
-worth_nocontract_after_taxes = taxed_nocontract + untaxed_nocontract * (1 - regular_tax_rate / 100) # applay final tax here
-worth_contract_after_taxes = taxed_contract + untaxed_contract * (1 - contract_tax_rate / 100) # applay final tax here
-difference = worth_nocontract_after_taxes - worth_contract_after_taxes
-ratio = worth_nocontract_after_taxes / worth_contract_after_taxes
-
-print(f"Ohne Vertrag {worth_nocontract_after_taxes:_.0f}€")
-print(f"Mit Vertrag {worth_contract_after_taxes:_.0f}€")
-print(f"Differenz {difference:_.0f}€ bzw {ratio * 100 - 100:.3f}%")
-print(f"Vertragsabschluss & Verwaltungskosten ohne Jährliche verwaltungskosten der Fondanlage: {sum_monthly_fees:_.0f}")
+(
+    worth_nocontract_after_taxes,
+    worth_contract_after_taxes,
+    difference,
+    ratio,
+    sum_monthly_fees
+) = compare_investments(
+    months,
+    monthly_rate,
+    dynamic,
+    avg_interest,
+    avg_fond_fees,
+    contract_fee,
+    etf_fee,
+    steuerfreibetrag,
+    monthly_fees,
+    regular_tax_rate,
+    contract_tax_rate,
+    reorganize_portfolio_times
+)
