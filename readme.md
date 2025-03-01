@@ -15,10 +15,18 @@ This Python script calculates compound interest over a specified number of years
 
 ---
 
+## Plots
+
+This code can generate visualization helping the interpretation of the simulation
+
+![](plots/breakeven.png)
+![](plots/compare_fair.png)
+
 ## Requirements
 
 - Python 3.x
-- `numpy`
+- Numpy
+- Matplotlib
 
 Install dependencies using:
 ```bash
@@ -54,5 +62,7 @@ monthly_fees = [[12 * 5, 28.88], [(60 - 21) * 12, 17.86]]  # Monthly fees in eur
 regular_tax_rate = 25  # Regular tax rate (percent)
 contract_tax_rate = 10  # Contractual tax rate (percent)
 reorganize_portfolio_times = 0  # Number of portfolio restructurings
+```
 
+### Licence
 This project is licensed under the MIT License. Feel free to use and modify.

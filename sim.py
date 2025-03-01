@@ -48,7 +48,6 @@ def compute_interest(monthly_rate, yrly_interest, rest_months, rate_increment=0,
     total_fees = 0
 
     yrs, rest_months = divmod(rest_months, 12)
-    print(rest_months)
     # reorganize portfolio X number of times "in the middle" of the investment process
     reorganize_portfolio_yrs = np.linspace(0, yrs, reorganize_portfolio_times + 2, dtype=int)[1:-1]
     for yr in range(yrs + 1):
@@ -93,7 +92,8 @@ def compare_investments(
         months,
         monthly_rate,
         dynamic,
-        avg_interest,
+        avg_nocontract_interest,
+        avg_contract_interest,
         avg_fond_fees,
         contract_fee,
         etf_fee,
@@ -135,14 +135,14 @@ def compare_investments(
 
     contract_pct_fee = avg_fond_fees + contract_fee
     taxed_nocontract, untaxed_nocontract, _ = compute_interest(monthly_rate,
-                                                               avg_interest - etf_fee,
+                                                               avg_nocontract_interest - etf_fee,
                                                                months,
                                                                rate_increment=dynamic,
                                                                reorganize_portfolio_times=reorganize_portfolio_times,
                                                                tax_rate=regular_tax_rate,
                                                                yrly_taxfree=steuerfreibetrag)
     taxed_contract, untaxed_contract, sum_monthly_fees = compute_interest(monthly_rate,
-                                                                          avg_interest - contract_pct_fee,
+                                                                          avg_contract_interest - contract_pct_fee,
                                                                           months,
                                                                           rate_increment=dynamic,
                                                                           monthly_fees=monthly_fees)
@@ -177,17 +177,25 @@ def compare_investments(
 months = 33*12 #30  # 33*12
 monthly_rate = 150  # 300
 dynamic = 0
-avg_interest = 7 #6  # 9.1 #7  # 9.1
-avg_fond_fees = 1.35  # 1.35  # avg fees of the active managed fonds in the contract as a percentage
+avg_nocontract_interest = 7 #6  # 9.1 #7  # 9.1
+avg_contract_interest = 7
+contract_fondfee = 1.35  # 1.35  # avg fees of the active managed fonds in the contract as a percentage
 contract_fee = 0.35  # annual fees for the contract itself, paid until pension as a percentage
-etf_fee = 1.35  # 0.22 # fees paid for the etf/investments outside of the contract as a percentage
+nocontract_fondfee = 0.22  # 0.22 # fees paid for the etf/investments outside of the contract as a percentage
 # fee = 1.35+0.35 #2.36 #2.34
-steuerfreibetrag = 0#1000  # 1000 #1000
-monthly_fees = [[12 * 5, 28.88], [(60 - 21) * 12,
+steuerfreibetrag = 0#1000 #1000  # 1000 #1000
+monthly_fees = [[12 * 5, 28.88], [months,
                                   17.86]]  # [[12*5, 28.88], [(60-21)*12, 17.86]] # monthly fees for the contract in absolute euros
 regular_tax_rate = 25  # 25  #  regular annual tax rate for capital investments in germany as a percentage
 contract_tax_rate = 10  # 10  # 0.04 # better tax rate you get because of the contract as a percentage
 reorganize_portfolio_times = 0  # number of times you reorganise your portfolio. Every time the portfolio is reorganized, taxes are paid
+
+# Copy some variables for later
+# Varying months while keeping other parameters constant
+fixed_monthly_rate = monthly_rate  # Fixed monthly contribution
+fixed_avg_nocontract_interest, fixed_avg_contract_interest = avg_nocontract_interest, avg_contract_interest  # Fixed average interest rate
+fixed_months = months  # Fixed months
+
 
 (
     worth_nocontract_after_taxes,
@@ -199,10 +207,11 @@ reorganize_portfolio_times = 0  # number of times you reorganise your portfolio.
     months,
     monthly_rate,
     dynamic,
-    avg_interest,
-    avg_fond_fees,
+    avg_nocontract_interest,
+    avg_contract_interest,
+    contract_fondfee,
     contract_fee,
-    etf_fee,
+    nocontract_fondfee,
     steuerfreibetrag,
     monthly_fees,
     regular_tax_rate,
@@ -210,226 +219,204 @@ reorganize_portfolio_times = 0  # number of times you reorganise your portfolio.
     reorganize_portfolio_times
 )
 
-# Varying months while keeping other parameters constant
-fixed_monthly_rate = monthly_rate  # Fixed monthly contribution
-fixed_avg_interest = avg_interest  # Fixed average interest rate
-fixed_months = months  # Fixed months
+def plot_varinterest_varorga():
 
-# Lists to store results
-months_list = np.linspace(12*30, 12*50, 5, dtype=int)  # 360 to 600 months
-monthly_rate_list = np.linspace(100, 1000, 5)  # 100 to 1000
-avg_interest_list = np.linspace(3, 10, 5)  # 3% to 10%
-reorganize_portfolio_times_list = range(0, 31)  # From 0 to 30
+    # Lists to store results
+    months_list = np.linspace(12*30, 12*50, 5, dtype=int)  # 360 to 600 months
+    monthly_rate_list = np.linspace(100, 1000, 5)  # 100 to 1000
+    avg_interest_list = np.linspace(3, 10, 5)  # 3% to 10%
+    reorganize_portfolio_times_list = range(0, 31)  # From 0 to 30
 
-# Store results for plotting
-months_results = []
-monthly_rate_results = []
-avg_interest_results = []
-reorganize_results = []
+    # Store results for plotting
+    months_results = []
+    monthly_rate_results = []
+    avg_interest_results = []
+    reorganize_results = []
 
-# Varying months
-for months in months_list:
-    worth_nocontract_after_taxes, worth_contract_after_taxes, difference, ratio, _ = compare_investments(
-        months,
-        fixed_monthly_rate,
-        dynamic,
-        fixed_avg_interest,
-        avg_fond_fees,
-        contract_fee,
-        etf_fee,
-        steuerfreibetrag,
-        monthly_fees,
-        regular_tax_rate,
-        contract_tax_rate,
-        reorganize_portfolio_times
+    # Varying avg_interest
+    for avg_interest in avg_interest_list:
+        worth_nocontract_after_taxes, worth_contract_after_taxes, difference, ratio, _ = compare_investments(
+            fixed_months,
+            fixed_monthly_rate,
+            dynamic,
+            avg_interest,
+            avg_interest,
+            contract_fondfee,
+            contract_fee,
+            nocontract_fondfee,
+            steuerfreibetrag,
+            monthly_fees,
+            regular_tax_rate,
+            contract_tax_rate,
+            reorganize_portfolio_times
+        )
+        avg_interest_results.append({
+            'avg_interest': avg_interest,
+            'worth_nocontract': worth_nocontract_after_taxes,
+            'worth_contract': worth_contract_after_taxes,
+            'difference': difference,
+            'ratio': ratio
+        })
+
+    # Varying reorganize_portfolio_times
+    for reorganize_times in reorganize_portfolio_times_list:
+        worth_nocontract_after_taxes, worth_contract_after_taxes, difference, ratio, _ = compare_investments(
+            fixed_months,
+            fixed_monthly_rate,
+            dynamic,
+            fixed_avg_nocontract_interest,
+            fixed_avg_contract_interest,
+            contract_fondfee,
+            contract_fee,
+            nocontract_fondfee,
+            steuerfreibetrag,
+            monthly_fees,
+            regular_tax_rate,
+            contract_tax_rate,
+            reorganize_times
+        )
+        reorganize_results.append({
+            'reorganize_times': reorganize_times,
+            'worth_nocontract': worth_nocontract_after_taxes,
+            'worth_contract': worth_contract_after_taxes,
+            'difference': difference,
+            'ratio': ratio
+        })
+
+    # Replace the previous plotting code with this adjusted code
+
+    # Plotting
+    fig, axes = plt.subplots(2, 1, figsize=(18, 12))
+
+    # Plot 1: Varying avg_interest
+    axes[0].plot(
+        [res['avg_interest'] for res in avg_interest_results],
+        [res['worth_nocontract'] / 1000 for res in avg_interest_results],
+        label='Without Contract',
+        marker='o',
+        color='blue'
     )
-    months_results.append({
-        'months': months,
-        'worth_nocontract': worth_nocontract_after_taxes,
-        'worth_contract': worth_contract_after_taxes,
-        'difference': difference,
-        'ratio': ratio
-    })
-
-# Varying monthly_rate
-for monthly_rate in monthly_rate_list:
-    worth_nocontract_after_taxes, worth_contract_after_taxes, difference, ratio, _ = compare_investments(
-        fixed_months,
-        monthly_rate,
-        dynamic,
-        fixed_avg_interest,
-        avg_fond_fees,
-        contract_fee,
-        etf_fee,
-        steuerfreibetrag,
-        monthly_fees,
-        regular_tax_rate,
-        contract_tax_rate,
-        reorganize_portfolio_times
+    axes[0].plot(
+        [res['avg_interest'] for res in avg_interest_results],
+        [res['worth_contract'] / 1000 for res in avg_interest_results],
+        label='With Contract',
+        marker='o',
+        color='green'
     )
-    monthly_rate_results.append({
-        'monthly_rate': monthly_rate,
-        'worth_nocontract': worth_nocontract_after_taxes,
-        'worth_contract': worth_contract_after_taxes,
-        'difference': difference,
-        'ratio': ratio
-    })
+    axes[0].set_title('Investment Worth vs. Average Interest Rate')
+    axes[0].set_xlabel('Average Interest Rate (%)')
+    axes[0].set_ylabel('Worth After Taxes (€ x1000)')
+    axes[0].legend()
+    axes[0].grid(True)
 
-# Varying avg_interest
-for avg_interest in avg_interest_list:
-    worth_nocontract_after_taxes, worth_contract_after_taxes, difference, ratio, _ = compare_investments(
-        fixed_months,
-        fixed_monthly_rate,
-        dynamic,
-        avg_interest,
-        avg_fond_fees,
-        contract_fee,
-        etf_fee,
-        steuerfreibetrag,
-        monthly_fees,
-        regular_tax_rate,
-        contract_tax_rate,
-        reorganize_portfolio_times
+    # Plot 2: Varying reorganize_portfolio_times
+    axes[1].plot(
+        [res['reorganize_times'] for res in reorganize_results],
+        [res['worth_nocontract'] / 1000 for res in reorganize_results],
+        label='Without Contract',
+        marker='o',
+        color='blue'
     )
-    avg_interest_results.append({
-        'avg_interest': avg_interest,
-        'worth_nocontract': worth_nocontract_after_taxes,
-        'worth_contract': worth_contract_after_taxes,
-        'difference': difference,
-        'ratio': ratio
-    })
-
-# Varying reorganize_portfolio_times
-for reorganize_times in reorganize_portfolio_times_list:
-    worth_nocontract_after_taxes, worth_contract_after_taxes, difference, ratio, _ = compare_investments(
-        fixed_months,
-        fixed_monthly_rate,
-        dynamic,
-        fixed_avg_interest,
-        avg_fond_fees,
-        contract_fee,
-        etf_fee,
-        steuerfreibetrag,
-        monthly_fees,
-        regular_tax_rate,
-        contract_tax_rate,
-        reorganize_times
+    axes[1].plot(
+        [res['reorganize_times'] for res in reorganize_results],
+        [res['worth_contract'] / 1000 for res in reorganize_results],
+        label='With Contract',
+        marker='o',
+        color='green'
     )
-    reorganize_results.append({
-        'reorganize_times': reorganize_times,
-        'worth_nocontract': worth_nocontract_after_taxes,
-        'worth_contract': worth_contract_after_taxes,
-        'difference': difference,
-        'ratio': ratio
-    })
+    axes[1].set_title('Investment Worth vs. Portfolio Reorganizations')
+    axes[1].set_xlabel('Number of Portfolio Reorganizations')
+    axes[1].set_ylabel('Worth After Taxes (€ x1000)')
+    axes[1].legend()
+    axes[1].grid(True)
 
-# Replace the previous plotting code with this adjusted code
+    # Add default parameters and monthly fees as text within the figure
+    textstr = f"""Default Parameters:
+    - Investment Duration: {fixed_months // 12} years
+    - Monthly Contribution: €{fixed_monthly_rate}
+    - Average Interest Rate (Depot): {fixed_avg_nocontract_interest}%
+    - Average Interest Rate (Contract): {fixed_avg_contract_interest}%
+    - Regular Tax Rate: {regular_tax_rate}%
+    - Contract Tax Rate: {contract_tax_rate}%
+    - ETF Fee: {nocontract_fondfee}%
+    - Fund Fees (Contract): {contract_fondfee}%
+    - Contract Fee: {contract_fee}%
+    - Monthly Fees:
+      - First {monthly_fees[0][0]} months: €{monthly_fees[0][1]} per month
+      - First {monthly_fees[1][0]} months: €{monthly_fees[1][1]} per month
+    - Reorganize portfolio times: {reorganize_portfolio_times}
+    """
 
-# Plotting
-fig, axes = plt.subplots(2, 2, figsize=(18, 12))
+    # Adjust the position of the text box
+    fig.text(.77, .28, textstr, ha='center', fontsize=12,
+             bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
 
-# Plot 1: Varying months
-axes[0, 0].plot(
-    [res['months'] / 12 for res in months_results],  # Convert months to years
-    [res['worth_nocontract'] / 1000 for res in months_results],
-    label='Without Contract',
-    marker='o',
-    color='blue'
-)
-axes[0, 0].plot(
-    [res['months'] / 12 for res in months_results],
-    [res['worth_contract'] / 1000 for res in months_results],
-    label='With Contract',
-    marker='o',
-    color='green'
-)
-axes[0, 0].set_title('Investment Worth vs. Investment Duration')
-axes[0, 0].set_xlabel('Investment Duration (Years)')
-axes[0, 0].set_ylabel('Worth After Taxes (€ x1000)')
-axes[0, 0].legend()
-axes[0, 0].grid(True)
+    plt.tight_layout(rect=[0, 0.1, 1, 0.95])  # Adjust layout to make room for the text box
+    plt.show()
 
-# Plot 2: Varying monthly_rate
-axes[0, 1].plot(
-    [res['monthly_rate'] for res in monthly_rate_results],
-    [res['worth_nocontract'] / 1000 for res in monthly_rate_results],
-    label='Without Contract',
-    marker='o',
-    color='blue'
-)
-axes[0, 1].plot(
-    [res['monthly_rate'] for res in monthly_rate_results],
-    [res['worth_contract'] / 1000 for res in monthly_rate_results],
-    label='With Contract',
-    marker='o',
-    color='green'
-)
-axes[0, 1].set_title('Investment Worth vs. Monthly Contribution')
-axes[0, 1].set_xlabel('Monthly Contribution (€)')
-axes[0, 1].set_ylabel('Worth After Taxes (€ x1000)')
-axes[0, 1].legend()
-axes[0, 1].grid(True)
+def plot_heatmap():
+    # Heatmap code
+    # Define ranges for avg_nocontract_interest and avg_contract_interest
+    nocontract_interest_values = np.linspace(3, 10, 50)  # 3% to 10%, 50 steps
+    contract_interest_values = np.linspace(3, 10, 50)  # 3% to 10%, 50 steps
 
-# Plot 3: Varying avg_interest
-axes[1, 0].plot(
-    [res['avg_interest'] for res in avg_interest_results],
-    [res['worth_nocontract'] / 1000 for res in avg_interest_results],
-    label='Without Contract',
-    marker='o',
-    color='blue'
-)
-axes[1, 0].plot(
-    [res['avg_interest'] for res in avg_interest_results],
-    [res['worth_contract'] / 1000 for res in avg_interest_results],
-    label='With Contract',
-    marker='o',
-    color='green'
-)
-axes[1, 0].set_title('Investment Worth vs. Average Interest Rate')
-axes[1, 0].set_xlabel('Average Interest Rate (%)')
-axes[1, 0].set_ylabel('Worth After Taxes (€ x1000)')
-axes[1, 0].legend()
-axes[1, 0].grid(True)
+    # Create a meshgrid for the heatmap
+    X, Y = np.meshgrid(nocontract_interest_values, contract_interest_values)
 
-# Plot 4: Varying reorganize_portfolio_times
-axes[1, 1].plot(
-    [res['reorganize_times'] for res in reorganize_results],
-    [res['worth_nocontract'] / 1000 for res in reorganize_results],
-    label='Without Contract',
-    marker='o',
-    color='blue'
-)
-axes[1, 1].plot(
-    [res['reorganize_times'] for res in reorganize_results],
-    [res['worth_contract'] / 1000 for res in reorganize_results],
-    label='With Contract',
-    marker='o',
-    color='green'
-)
-axes[1, 1].set_title('Investment Worth vs. Portfolio Reorganizations')
-axes[1, 1].set_xlabel('Number of Portfolio Reorganizations')
-axes[1, 1].set_ylabel('Worth After Taxes (€ x1000)')
-axes[1, 1].legend()
-axes[1, 1].grid(True)
+    # Initialize a matrix to store the differences
+    difference_matrix = np.zeros_like(X)
+    # Loop over interest rates and compute differences
+    for i in range(X.shape[0]):
+        for j in range(X.shape[1]):
+            avg_nocontract_interest = X[i, j]
+            avg_contract_interest = Y[i, j]
 
-# Add default parameters and monthly fees as text within the figure
-textstr = f"""Default Parameters:
-- Investment Duration: {fixed_months // 12} years
-- Monthly Contribution: €{fixed_monthly_rate}
-- Average Interest Rate: {fixed_avg_interest}%
-- Regular Tax Rate: {regular_tax_rate}%
-- Contract Tax Rate: {contract_tax_rate}%
-- ETF Fee: {etf_fee}%
-- Fund Fees (Contract): {avg_fond_fees}%
-- Contract Fee: {contract_fee}%
-- Monthly Fees:
-  - First {monthly_fees[0][0]} months: €{monthly_fees[0][1]} per month
-  - First {monthly_fees[1][0]} months: €{monthly_fees[1][1]} per month
-"""
+            worth_nocontract_after_taxes, worth_contract_after_taxes, _, _, _ = compare_investments(
+                months,
+                monthly_rate,
+                dynamic,
+                avg_nocontract_interest,
+                avg_contract_interest,
+                contract_fondfee,
+                contract_fee,
+                nocontract_fondfee,
+                steuerfreibetrag,
+                monthly_fees,
+                regular_tax_rate,
+                contract_tax_rate,
+                reorganize_portfolio_times
+            )
 
-# Adjust the position of the text box
-fig.text(0.5, -.005, textstr, ha='center', fontsize=12,
-         bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+            difference = worth_nocontract_after_taxes - worth_contract_after_taxes
+            difference_matrix[i, j] = difference  # Note the order of indices
 
-plt.tight_layout(rect=[0, 0.1, 1, 0.95])  # Adjust layout to make room for the text box
-plt.show()
+    # Create the heatmap
+    plt.figure(figsize=(10, 8))
+    heatmap = plt.pcolormesh(
+        X, Y, difference_matrix, shading='auto', cmap='coolwarm'
+    )
+    plt.colorbar(heatmap, label='Difference (€)')
+
+    # Add contour line where difference is zero
+    contour = plt.contour(
+        X, Y, difference_matrix, levels=[0], colors='black', linewidths=2
+    )
+    plt.clabel(contour, fmt='Breakeven line', colors='black', fontsize=12)
+    # Set x and y ticks at whole numbers
+    x_ticks = np.arange(3, 11, 1)  # From 3 to 10 inclusive
+    y_ticks = np.arange(3, 11, 1)
+
+    plt.xticks(x_ticks)
+    plt.yticks(y_ticks)
+
+    # Add grid lines at whole numbers
+    plt.grid(which='both', color='gray', linestyle='--', linewidth=0.5)
+    plt.xlabel('No-Contract Average Interest Rate (%)')
+    plt.ylabel('Contract Average Interest Rate (%)')
+    plt.title('Difference in Returns: No-Contract vs. Contract')
+
+    plt.show()
+
+
+plot_varinterest_varorga()
+#plot_heatmap()
